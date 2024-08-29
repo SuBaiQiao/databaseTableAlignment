@@ -1,4 +1,4 @@
-package com.subaiqiao.databaseTableAlignment;
+package com.subaiqiao.databaseTableAlignment.pojo;
 
 import java.util.List;
 

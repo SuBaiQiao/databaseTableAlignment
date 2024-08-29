@@ -1,4 +1,4 @@
-package com.subaiqiao.databaseTableAlignment;
+package com.subaiqiao.databaseTableAlignment.pojo;
 
 public class Columns {
     private String columnName;
