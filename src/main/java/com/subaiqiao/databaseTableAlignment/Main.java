@@ -17,13 +17,13 @@ public class Main {
     public static void main(String[] args) {
         String schema = "jwrs";
         // 需要给谁检查
-        Connection connection = connection("192.168.68.150", "54321", "system", "system");
+        Connection connection = connection("localhost", "54321", "system", "system");
         List<Table> jwrs = getTables(schema, connection);
         jwrs.forEach(e -> e.setColumns(getColumns(schema, e.getTableName(), connection)));
         List<Comments> commentsList = getComments(schema, connection);
 
         // 谁是对的
-        Connection connection2 = connection("localhost", "54321", "system", "system");
+        Connection connection2 = connection("192.168.68.150", "54321", "system", "system");
         List<Table> jwrs2 = getTables(schema, connection2);
         jwrs2.forEach(e -> e.setColumns(getColumns(schema, e.getTableName(), connection2)));
         List<Comments> commentsList2 = getComments(schema, connection2);
