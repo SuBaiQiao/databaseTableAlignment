@@ -38,13 +38,17 @@ public class Main {
         }
         // 关闭资源
         try {
-            if (connection != null) connection.close();
+            if (connection != null) {
+                connection.close();
+            }
         } catch (SQLException e) {
             e.printStackTrace();
         }
 
         try {
-            if (connection2 != null) connection2.close();
+            if (connection2 != null) {
+                connection2.close();
+            }
         } catch (SQLException e) {
             e.printStackTrace();
         }
@@ -203,9 +207,9 @@ public class Main {
                     "where table_schema = '" + schema + "'");
             while (rs.next()) {
                 // 处理结果集
-                String table_name = rs.getString("table_name");
+                String tableName = rs.getString("table_name");
                 Table table = new Table();
-                table.setTableName(table_name.toUpperCase());
+                table.setTableName(tableName.toUpperCase());
                 list.add(table);
             }
         } catch (Exception e) {
