@@ -5,6 +5,8 @@ import com.subaiqiao.databaseTableAlignment.pojo.Comments;
 import com.subaiqiao.databaseTableAlignment.pojo.Table;
 import com.subaiqiao.databaseTableAlignment.strategy.DatabaseContext;
 import com.subaiqiao.databaseTableAlignment.strategy.DatabaseEnum;
+import com.subaiqiao.databaseTableAlignment.strategy.DatabaseStrategy;
+import com.subaiqiao.databaseTableAlignment.strategy.DatabaseStrategyFactory;
 import com.subaiqiao.databaseTableAlignment.strategy.kingBase.KingBaseDatabaseStrategy;
 
 import java.sql.Connection;
@@ -16,27 +18,25 @@ import java.util.stream.Collectors;
  */
 public class Main {
 
-    static DatabaseContext context = new DatabaseContext();
+    public static DatabaseContext context = new DatabaseContext();
 
-    private static final DatabaseEnum DATABASE_TYPE = DatabaseEnum.KING_BASE;
+    private static final DatabaseEnum DATABASE_TYPE = DatabaseEnum.DM;
 
-    private static final String SCHEMA = "jwrs";
+    private static final String SCHEMA = "HW_SSIP";
 
     public static void main(String[] args) {
-        if (DATABASE_TYPE.equals(DatabaseEnum.KING_BASE)) {
-            context.setStrategy(new KingBaseDatabaseStrategy());
-        }
+        context.setStrategy(DatabaseStrategyFactory.getStrategy(DATABASE_TYPE));
         if (Objects.isNull(context.getStrategy())) {
             throw new RuntimeException("请选择数据库类型");
         }
         // 需要给谁检查
-        Connection connection = context.getConnection("localhost", "54321", "system", "system");
+        Connection connection = context.getConnection("192.168.0.160", "5236", "SYSDBA", "SYSDBA001", SCHEMA);
         List<Table> jwrs = context.getTables(SCHEMA, connection);
         jwrs.forEach(e -> e.setColumns(context.getColumns(SCHEMA, e.getTableName(), connection)));
         List<Comments> commentsList = context.getComments(SCHEMA, connection);
 
         // 谁是对的
-        Connection connection2 = context.getConnection("192.168.68.150", "54321", "system", "system");
+        Connection connection2 = context.getConnection("localhost", "5236", "SYSDBA", "Aa123456", SCHEMA);
         List<Table> jwrs2 = context.getTables(SCHEMA, connection2);
         jwrs2.forEach(e -> e.setColumns(context.getColumns(SCHEMA, e.getTableName(), connection2)));
         List<Comments> commentsList2 = context.getComments(SCHEMA, connection2);

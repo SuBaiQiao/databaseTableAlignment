@@ -1,4 +1,4 @@
-package com.subaiqiao.databaseTableAlignment.strategy.kingBase;
+package com.subaiqiao.databaseTableAlignment.strategy.dm;
 
 import com.subaiqiao.databaseTableAlignment.pojo.Columns;
 import com.subaiqiao.databaseTableAlignment.pojo.Comments;
@@ -14,12 +14,15 @@ import java.util.Optional;
  * @author Caozhaoyu
  * @date 2025年10月11日 17:46
  */
-public class KingBaseDatabaseStrategy implements DatabaseStrategy {
+public class DmDatabaseStrategy implements DatabaseStrategy {
     @Override
     public String getDataType(Columns column) {
         String dateType = column.getDataType();
         if ("timestamp without time zone".equalsIgnoreCase(dateType)) {
             dateType = "datetime";
+        }
+        if ("timestamp".equalsIgnoreCase(dateType)) {
+            dateType = "TIMESTAMP";
         }
         if ("bpchar".equalsIgnoreCase(dateType)) {
             dateType = "char";
@@ -28,7 +31,7 @@ public class KingBaseDatabaseStrategy implements DatabaseStrategy {
             }
         }
         if ("varchar".equalsIgnoreCase(dateType)) {
-            dateType = "varchar2";
+            dateType = "varchar";
             if (null != column.getCharacterMaximumLength() && !"".equals(column.getCharacterMaximumLength())) {
                 dateType += "(" + column.getCharacterMaximumLength() + ")";
             }
@@ -47,13 +50,24 @@ public class KingBaseDatabaseStrategy implements DatabaseStrategy {
                 dateType += "," + scale + ")";
             }
         }
+        if ("decimal".equalsIgnoreCase(dateType)) {
+            dateType = "decimal";
+            if (null != column.getNumericPrecision() && !"".equals(column.getNumericPrecision())) {
+                dateType += "(" + column.getNumericPrecision();
+                String scale = "0";
+                if (null != column.getNumericScale() && !"".equals(column.getNumericScale())) {
+                    scale = column.getNumericScale();
+                }
+                dateType += "," + scale + ")";
+            }
+        }
         return dateType;
     }
 
     @Override
     public Connection connection(String host, String port, String user, String password, String schema) {
         Connection conn = null;
-        String url = "jdbc:kingbase8://" + host + ":" + port + "/" + schema + "?clientEncoding=UTF8";
+        String url = "jdbc:dm://" + host + ":" + port + "?schema=" + schema;
         try {
             // 对于JDBC 4.0及以上版本，可以省略Class.forName()
             // Class.forName("com.mysql.cj.jdbc.Driver");
@@ -81,12 +95,10 @@ public class KingBaseDatabaseStrategy implements DatabaseStrategy {
         List<Table> list = new ArrayList<>();
         try {
             Statement stmt = connection.createStatement();
-            ResultSet rs = stmt.executeQuery("select table_name\n" +
-                    "from information_schema.tables\n" +
-                    "where table_schema = '" + schema + "'");
+            ResultSet rs = stmt.executeQuery("SELECT TABLE_NAME FROM ALL_TAB_COMMENTS WHERE OWNER = '" + schema + "' AND TABLE_TYPE = 'TABLE' ORDER BY TABLE_NAME");
             while (rs.next()) {
                 // 处理结果集
-                String tableName = rs.getString("table_name");
+                String tableName = rs.getString("TABLE_NAME");
                 Table table = new Table();
                 table.setTableName(tableName.toUpperCase());
                 list.add(table);
@@ -102,13 +114,7 @@ public class KingBaseDatabaseStrategy implements DatabaseStrategy {
         List<Comments> list = new ArrayList<>();
         try {
             Statement stmt = connection.createStatement();
-            ResultSet rs = stmt.executeQuery("select comments.OWNER as OWNER," +
-                    " comments.TABLE_NAME as TABLE_NAME," +
-                    " comments.COLUMN_NAME as COLUMN_NAME," +
-                    " comments.COMMENTS as COMMENTS" +
-                    " from all_col_comments comments, information_schema.tables tables" +
-                    " where tables.table_schema = '" + schema + "'" +
-                    " and upper(comments.table_name) = upper(tables.table_name)");
+            ResultSet rs = stmt.executeQuery("SELECT COL.TABLE_NAME, COL.OWNER, COL.COLUMN_NAME, COM.COMMENTS FROM ALL_TAB_COLS COL LEFT JOIN USER_COL_COMMENTS COM ON COL.COLUMN_NAME = COM.COLUMN_NAME AND COL.TABLE_NAME = COM.TABLE_NAME AND COM.OWNER = COL.OWNER WHERE COL.OWNER = '" + schema + "' ORDER BY COL.COLUMN_ID;");
             while (rs.next()) {
                 // 处理结果集
                 String owner = rs.getString("OWNER");
@@ -134,16 +140,16 @@ public class KingBaseDatabaseStrategy implements DatabaseStrategy {
         List<Columns> list = new ArrayList<>();
         try {
             Statement stmt = connection.createStatement();
-            ResultSet rs = stmt.executeQuery("select column_name, is_nullable, data_type, character_maximum_length, numeric_precision, numeric_scale, is_identity from information_schema.columns where table_schema = '" + schema + "' and upper(table_name) = '" + tableName + "'");
+            ResultSet rs = stmt.executeQuery("SELECT COL.COLUMN_NAME, COL.DATA_TYPE, COL.DATA_LENGTH AS CHARACTER_MAXIMUM_LENGTH, COL.DATA_PRECISION AS NUMERIC_PRECISION, COL.DATA_SCALE AS NUMERIC_SCALE, COL.NULLABLE AS IS_NULLABLE, CASE WHEN PK.COLUMN_NAME IS NOT NULL THEN 'Y' ELSE 'N' END AS IS_IDENTITY FROM ALL_TAB_COLS COL LEFT JOIN ( SELECT CU.COLUMN_NAME FROM USER_CONSTRAINTS C JOIN USER_CONS_COLUMNS CU ON C.CONSTRAINT_NAME = CU.CONSTRAINT_NAME AND C.OWNER = '" + schema + "' WHERE CU.COLUMN_NAME IS NOT NULL AND C.CONSTRAINT_TYPE = 'P' AND C.TABLE_NAME = '" + tableName + "') PK ON COL.COLUMN_NAME = PK.COLUMN_NAME WHERE COL.TABLE_NAME = '" + tableName + "' AND COL.OWNER = '" + schema + "' ORDER BY COL.COLUMN_ID;");
             while (rs.next()) {
                 // 处理结果集
-                String columnName = rs.getString("column_name");
-                String isNullable = rs.getString("is_nullable");
-                String dataType = rs.getString("data_type");
-                String characterMaximumLength = rs.getString("character_maximum_length");
-                String numericPrecision = rs.getString("numeric_precision");
-                String numericScale = rs.getString("numeric_scale");
-                String isIdentity = rs.getString("is_identity");
+                String columnName = rs.getString("COLUMN_NAME");
+                String isNullable = rs.getString("IS_NULLABLE");
+                String dataType = rs.getString("DATA_TYPE");
+                String characterMaximumLength = rs.getString("CHARACTER_MAXIMUM_LENGTH");
+                String numericPrecision = rs.getString("NUMERIC_PRECISION");
+                String numericScale = rs.getString("NUMERIC_SCALE");
+                String isIdentity = rs.getString("IS_IDENTITY");
                 Columns columns = new Columns();
                 columns.setColumnName(columnName.toUpperCase());
                 columns.setIsNullable(isNullable);
@@ -216,12 +222,17 @@ public class KingBaseDatabaseStrategy implements DatabaseStrategy {
 
     @Override
     public String generateCreateSql(String schema, String tableName, List<Columns> list) {
-        StringBuilder sql = new StringBuilder(String.format("create table %s.%s\n" +
+        StringBuilder sql = new StringBuilder(String.format("create table \"%s\".\"%s\"\n" +
                 "(\n", schema, tableName));
         for (Columns column : list) {
-            sql.append(String.format("\t%s %s%s,\n", column.getColumnName(), getDataType(column), "id".equalsIgnoreCase(column.getColumnName()) ? " not null" : ""));
+            sql.append(String.format("\t\"%s\" %s %s %s,\n",
+                    column.getColumnName(),
+                    getDataType(column),
+                    "id".equalsIgnoreCase(column.getColumnName()) ? "IDENTITY(1, 1)" : "",
+                    "id".equalsIgnoreCase(column.getColumnName()) ? "NOT NULL" : "")
+            );
         }
-        sql.append(String.format("\tconstraint PK_%s primary key (ID)\n" + ");", tableName.toUpperCase()));
+        sql.append("UNIQUE(\"ID\"),\n NOT CLUSTER PRIMARY KEY(\"ID\")\n) STORAGE(ON \"MAIN\", CLUSTERBTR);");
         return sql.toString();
     }
 

@@ -23,8 +23,8 @@ public class DatabaseContext {
         return strategy;
     }
 
-    public Connection getConnection(String host, String port, String user, String password) {
-        return strategy.connection(host, port, user, password);
+    public Connection getConnection(String host, String port, String user, String password, String schema) {
+        return strategy.connection(host, port, user, password, schema);
     }
 
     public void close(Connection connection) {

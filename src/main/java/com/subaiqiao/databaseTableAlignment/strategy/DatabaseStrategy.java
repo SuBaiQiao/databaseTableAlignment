@@ -13,7 +13,7 @@ import java.util.List;
  */
 public interface DatabaseStrategy {
     String getDataType(Columns column);
-    Connection connection(String host, String port, String user, String password);
+    Connection connection(String host, String port, String user, String password, String schema);
     void close(Connection connection);
     List<Table> getTables(String schema, Connection connection);
     List<Comments> getComments(String schema, Connection connection);
