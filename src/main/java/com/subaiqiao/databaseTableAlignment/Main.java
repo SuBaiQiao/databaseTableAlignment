@@ -30,13 +30,13 @@ public class Main {
             throw new RuntimeException("请选择数据库类型");
         }
         // 需要给谁检查
-        Connection connection = context.getConnection("192.168.0.160", "5236", "SYSDBA", "SYSDBA001", SCHEMA);
+        Connection connection = context.getConnection("192.168.0.105", "5236", "SYSDBA", "Aa123456", SCHEMA);
         List<Table> jwrs = context.getTables(SCHEMA, connection);
         jwrs.forEach(e -> e.setColumns(context.getColumns(SCHEMA, e.getTableName(), connection)));
         List<Comments> commentsList = context.getComments(SCHEMA, connection);
 
         // 谁是对的
-        Connection connection2 = context.getConnection("localhost", "5236", "SYSDBA", "Aa123456", SCHEMA);
+        Connection connection2 = context.getConnection("192.168.0.200", "30236", "SYSDBA", "SYSDBA001", SCHEMA);
         List<Table> jwrs2 = context.getTables(SCHEMA, connection2);
         jwrs2.forEach(e -> e.setColumns(context.getColumns(SCHEMA, e.getTableName(), connection2)));
         List<Comments> commentsList2 = context.getComments(SCHEMA, connection2);
