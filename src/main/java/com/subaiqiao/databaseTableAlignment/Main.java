@@ -30,15 +30,17 @@ public class Main {
             throw new RuntimeException("请选择数据库类型");
         }
         // 需要给谁检查
-        Connection connection = context.getConnection("192.168.0.105", "5236", "SYSDBA", "Aa123456", SCHEMA);
+        Connection connection = context.getConnection("192.168.0.200", "30236", "SYSDBA", "SYSDBA001", SCHEMA);
         List<Table> jwrs = context.getTables(SCHEMA, connection);
-        jwrs.forEach(e -> e.setColumns(context.getColumns(SCHEMA, e.getTableName(), connection)));
+        Map<String, List<Columns>> columnsMap = context.getColumnsMap(SCHEMA, connection);
+        jwrs.forEach(e -> e.setColumns(columnsMap.getOrDefault(e.getTableName(), Collections.emptyList())));
         List<Comments> commentsList = context.getComments(SCHEMA, connection);
 
         // 谁是对的
-        Connection connection2 = context.getConnection("192.168.0.200", "30236", "SYSDBA", "SYSDBA001", SCHEMA);
+        Connection connection2 = context.getConnection("192.168.0.200", "5238", "SYSDBA", "SYSDBA001", SCHEMA);
         List<Table> jwrs2 = context.getTables(SCHEMA, connection2);
-        jwrs2.forEach(e -> e.setColumns(context.getColumns(SCHEMA, e.getTableName(), connection2)));
+        Map<String, List<Columns>> columnsMap2 = context.getColumnsMap(SCHEMA, connection2);
+        jwrs2.forEach(e -> e.setColumns(columnsMap2.getOrDefault(e.getTableName(), Collections.emptyList())));
         List<Comments> commentsList2 = context.getComments(SCHEMA, connection2);
 
         List<String> list = validateAndGenerateSql(jwrs, jwrs2, SCHEMA, commentsList, commentsList2);
@@ -57,6 +59,8 @@ public class Main {
     public static List<String> validateAndGenerateSql(List<Table> errorList, List<Table> successList, String schema, List<Comments> commentsList, List<Comments> commentsList2) {
         Map<String, List<Columns>> successMap = successList.stream().collect(Collectors.toMap(Table::getTableName, Table::getColumns));
         Map<String, List<Columns>> errorMap = errorList.stream().collect(Collectors.toMap(Table::getTableName, Table::getColumns));
+        Map<String, Comments> errorCommentsMap = buildCommentMap(commentsList);
+        Map<String, Comments> successCommentsMap = buildCommentMap(commentsList2);
         List<String> sqlList = new ArrayList<>();
         List<String> tipsList = new ArrayList<>();
         successMap.forEach((k, v) -> {
@@ -64,7 +68,10 @@ public class Main {
             if (!errorMap.containsKey(k)) {
                 tipsList.add("缺少表：\t" + k + "\t字段：" + v.stream().map(Columns::getColumnName).collect(Collectors.joining("、")));
                 sql.add(context.generateCreateSql(schema, k, v));
-                sql.add(context.generateCommentsSql(schema, k, v, commentsList, commentsList2));
+                String commentsSql = generateCommentsSql(schema, k, v, errorCommentsMap, successCommentsMap);
+                if (!commentsSql.isEmpty()) {
+                    sql.add(commentsSql);
+                }
             } else {
                 List<Columns> columns = errorMap.get(k);
                 Set<String> lackSet = v.stream().map(Columns::getColumnName).collect(Collectors.toSet());
@@ -75,17 +82,11 @@ public class Main {
                         if (lackSet.contains(column.getColumnName())) {
                             sql.add(context.generateUpdateSql(schema, k, column));
                         }
-                        String generateCommentsSql = context.generateCommentsSql(schema, k, column, commentsList, commentsList2);
-                        if (!generateCommentsSql.isEmpty()) {
-                            sql.add(generateCommentsSql);
-                        }
                     }
                 }
-                for (Columns column : v) {
-                    String generateCommentsSql = context.generateCommentsSql(schema, k, column, commentsList, commentsList2);
-                    if (!generateCommentsSql.isEmpty()) {
-                        sql.add(generateCommentsSql);
-                    }
+                String commentsSql = generateCommentsSql(schema, k, v, errorCommentsMap, successCommentsMap);
+                if (!commentsSql.isEmpty()) {
+                    sql.add(commentsSql);
                 }
             }
             if (!sql.isEmpty()) {
@@ -96,6 +97,41 @@ public class Main {
         tipsList.forEach(System.out::println);
         System.out.println("===================提示信息END======================");
         return sqlList;
+    }
+
+    private static Map<String, Comments> buildCommentMap(List<Comments> commentsList) {
+        Map<String, Comments> map = new HashMap<>();
+        for (Comments comments : commentsList) {
+            map.put(buildCommentKey(comments.getTableName(), comments.getColumnName()), comments);
+        }
+        return map;
+    }
+
+    private static String buildCommentKey(String tableName, String columnName) {
+        return tableName.toUpperCase() + "." + columnName.toUpperCase();
+    }
+
+    private static String generateCommentsSql(String schema, String tableName, List<Columns> columns, Map<String, Comments> errorCommentsMap, Map<String, Comments> successCommentsMap) {
+        StringBuilder sql = new StringBuilder();
+        for (Columns column : columns) {
+            String commentsSql = generateCommentsSql(schema, tableName, column, errorCommentsMap, successCommentsMap);
+            if (!commentsSql.isEmpty()) {
+                sql.append(commentsSql);
+            }
+        }
+        return sql.toString();
+    }
+
+    private static String generateCommentsSql(String schema, String tableName, Columns column, Map<String, Comments> errorCommentsMap, Map<String, Comments> successCommentsMap) {
+        Comments expectedComments = successCommentsMap.get(buildCommentKey(tableName, column.getColumnName()));
+        if (expectedComments == null) {
+            return "";
+        }
+        Comments actualComments = errorCommentsMap.get(buildCommentKey(tableName, column.getColumnName()));
+        if (actualComments != null && Objects.equals(actualComments.getComments(), expectedComments.getComments())) {
+            return "";
+        }
+        return String.format("comment%non column %s.%s.%s is '%s';%n", schema, tableName, column.getColumnName(), expectedComments.getComments());
     }
 
 }

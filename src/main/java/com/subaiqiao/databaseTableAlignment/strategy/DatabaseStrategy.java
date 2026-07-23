@@ -7,6 +7,7 @@ import com.subaiqiao.databaseTableAlignment.pojo.Table;
 
 import java.sql.Connection;
 import java.util.List;
+import java.util.Map;
 
 /**
  * @author Caozhaoyu
@@ -17,6 +18,7 @@ public interface DatabaseStrategy {
     void close(Connection connection);
     List<Table> getTables(String schema, Connection connection);
     List<Comments> getComments(String schema, Connection connection);
+    Map<String, List<Columns>> getColumnsMap(String schema, Connection connection);
     List<Columns> getColumns(String schema, String tableName, Connection connection);
     String generateCommentsSql(String schema, String tableName, Columns column, List<Comments> commentsList, List<Comments> commentsList2);
     String generateCommentsSql(String schema, String tableName, List<Columns> list, List<Comments> commentsList, List<Comments> commentsList2);

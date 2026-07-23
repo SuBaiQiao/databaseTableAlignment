@@ -7,7 +7,9 @@ import com.subaiqiao.databaseTableAlignment.strategy.DatabaseStrategy;
 
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -133,6 +135,37 @@ public class DmDatabaseStrategy implements DatabaseStrategy {
             e.printStackTrace();
         }
         return list;
+    }
+
+    @Override
+    public Map<String, List<Columns>> getColumnsMap(String schema, Connection connection) {
+        Map<String, List<Columns>> map = new LinkedHashMap<>();
+        try {
+            Statement stmt = connection.createStatement();
+            ResultSet rs = stmt.executeQuery("SELECT COL.TABLE_NAME, COL.COLUMN_NAME, COL.DATA_TYPE, COL.DATA_LENGTH AS CHARACTER_MAXIMUM_LENGTH, COL.DATA_PRECISION AS NUMERIC_PRECISION, COL.DATA_SCALE AS NUMERIC_SCALE, COL.NULLABLE AS IS_NULLABLE, CASE WHEN PK.COLUMN_NAME IS NOT NULL THEN 'Y' ELSE 'N' END AS IS_IDENTITY FROM ALL_TAB_COLS COL LEFT JOIN ( SELECT C.TABLE_NAME, CU.COLUMN_NAME FROM USER_CONSTRAINTS C JOIN USER_CONS_COLUMNS CU ON C.CONSTRAINT_NAME = CU.CONSTRAINT_NAME AND C.OWNER = CU.OWNER WHERE C.OWNER = '" + schema + "' AND C.CONSTRAINT_TYPE = 'P') PK ON COL.TABLE_NAME = PK.TABLE_NAME AND COL.COLUMN_NAME = PK.COLUMN_NAME WHERE COL.OWNER = '" + schema + "' ORDER BY COL.TABLE_NAME, COL.COLUMN_ID;");
+            while (rs.next()) {
+                String tableName = rs.getString("TABLE_NAME").toUpperCase();
+                String columnName = rs.getString("COLUMN_NAME");
+                String isNullable = rs.getString("IS_NULLABLE");
+                String dataType = rs.getString("DATA_TYPE");
+                String characterMaximumLength = rs.getString("CHARACTER_MAXIMUM_LENGTH");
+                String numericPrecision = rs.getString("NUMERIC_PRECISION");
+                String numericScale = rs.getString("NUMERIC_SCALE");
+                String isIdentity = rs.getString("IS_IDENTITY");
+                Columns columns = new Columns();
+                columns.setColumnName(columnName.toUpperCase());
+                columns.setIsNullable(isNullable);
+                columns.setDataType(dataType);
+                columns.setCharacterMaximumLength(characterMaximumLength);
+                columns.setNumericPrecision(numericPrecision);
+                columns.setNumericScale(numericScale);
+                columns.setIsIdentity(isIdentity);
+                map.computeIfAbsent(tableName, key -> new ArrayList<>()).add(columns);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return map;
     }
 
     @Override

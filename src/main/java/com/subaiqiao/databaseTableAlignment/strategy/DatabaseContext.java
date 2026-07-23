@@ -6,6 +6,7 @@ import com.subaiqiao.databaseTableAlignment.pojo.Table;
 
 import java.sql.Connection;
 import java.util.List;
+import java.util.Map;
 
 /**
  * @author Caozhaoyu
@@ -41,6 +42,10 @@ public class DatabaseContext {
 
     public List<Comments> getComments(String schema, Connection connection) {
         return strategy.getComments(schema, connection);
+    }
+
+    public Map<String, List<Columns>> getColumnsMap(String schema, Connection connection) {
+        return strategy.getColumnsMap(schema, connection);
     }
 
     public List<Columns> getColumns(String schema, String tableName, Connection connection) {

@@ -7,7 +7,9 @@ import com.subaiqiao.databaseTableAlignment.strategy.DatabaseStrategy;
 
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -127,6 +129,37 @@ public class KingBaseDatabaseStrategy implements DatabaseStrategy {
             e.printStackTrace();
         }
         return list;
+    }
+
+    @Override
+    public Map<String, List<Columns>> getColumnsMap(String schema, Connection connection) {
+        Map<String, List<Columns>> map = new LinkedHashMap<>();
+        try {
+            Statement stmt = connection.createStatement();
+            ResultSet rs = stmt.executeQuery("select table_name, column_name, is_nullable, data_type, character_maximum_length, numeric_precision, numeric_scale, is_identity from information_schema.columns where table_schema = '" + schema + "' order by table_name, ordinal_position");
+            while (rs.next()) {
+                String tableName = rs.getString("table_name").toUpperCase();
+                String columnName = rs.getString("column_name");
+                String isNullable = rs.getString("is_nullable");
+                String dataType = rs.getString("data_type");
+                String characterMaximumLength = rs.getString("character_maximum_length");
+                String numericPrecision = rs.getString("numeric_precision");
+                String numericScale = rs.getString("numeric_scale");
+                String isIdentity = rs.getString("is_identity");
+                Columns columns = new Columns();
+                columns.setColumnName(columnName.toUpperCase());
+                columns.setIsNullable(isNullable);
+                columns.setDataType(dataType);
+                columns.setCharacterMaximumLength(characterMaximumLength);
+                columns.setNumericPrecision(numericPrecision);
+                columns.setNumericScale(numericScale);
+                columns.setIsIdentity(isIdentity);
+                map.computeIfAbsent(tableName, key -> new ArrayList<>()).add(columns);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return map;
     }
 
     @Override
