@@ -37,7 +37,7 @@ public class Main {
         List<Comments> commentsList = context.getComments(SCHEMA, connection);
 
         // 谁是对的
-        Connection connection2 = context.getConnection("192.168.0.200", "5238", "SYSDBA", "SYSDBA001", SCHEMA);
+        Connection connection2 = context.getConnection("localhost", "5237", "SYSDBA", "Aa123456", SCHEMA);
         List<Table> jwrs2 = context.getTables(SCHEMA, connection2);
         Map<String, List<Columns>> columnsMap2 = context.getColumnsMap(SCHEMA, connection2);
         jwrs2.forEach(e -> e.setColumns(columnsMap2.getOrDefault(e.getTableName(), Collections.emptyList())));

@@ -35,45 +35,33 @@
 - JDK 20+
 - Maven 3.6+
 
-### 编译运行
+### 启动网页应用
 
 ```bash
-# 进入项目目录
-cd databaseTableAlignment
-
-# 编译项目
-mvn clean compile
-
-# 运行项目
-mvn exec:java -Dexec.mainClass="com.subaiqiao.databaseTableAlignment.Main"
+mvn clean package
+mvn spring-boot:run
 ```
+
+启动后访问：
+
+```text
+http://localhost:8080/
+```
+
+网页中分别填写源数据库和基准数据库的 Schema 及连接信息，点击“开始对比”即可查看差异提示和待执行 SQL。两端 Schema 可以不同。第一版只负责生成和预览 SQL，不会自动执行 SQL。
+
+也可以直接运行打包后的应用：
+
+```bash
+java -jar target/databaseTableAlignment-1.0-SNAPSHOT.jar
+```
+
 
 ## 使用说明
 
-### 配置数据库连接
+网页通过 `POST /api/align/preview` 提交 JSON 请求，服务返回结构化的差异提示和 SQL。支持的数据库类型为 `DM` 和 `KING_BASE`。
 
-在 `src/main/java/com/subaiqiao/databaseTableAlignment/Main.java` 中配置：
-
-```java
-// 数据库类型：DM 或 KING_BASE
-private static final DatabaseEnum DATABASE_TYPE = DatabaseEnum.DM;
-
-// Schema名称
-private static final String SCHEMA = "HW_SSIP";
-
-// 源数据库（需要检查/修复的数据库）
-Connection connection = context.getConnection("192.168.0.105", "5236", "SYSDBA", "Aa123456", SCHEMA);
-
-// 目标数据库（作为基准的正确数据库）
-Connection connection2 = context.getConnection("192.168.0.200", "30236", "SYSDBA", "SYSDBA001", SCHEMA);
-```
-
-### 执行流程
-
-1. 连接源数据库和目标数据库
-2. 获取两个数据库的表结构、字段和注释信息
-3. 对比差异并生成对齐SQL
-4. 输出提示信息和执行SQL
+连接密码只用于当前请求，不会返回到网页响应或写入日志。生产环境还应在反向代理或应用层增加认证，并通过 HTTPS 保护传输过程。
 
 ## 支持的数据库类型
 

@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>数据库表结构对齐</title>
+<style>
+body{font-family:Arial,sans-serif;max-width:1100px;margin:32px auto;padding:0 20px;color:#172033;background:#f5f7fb}h1{margin-bottom:8px}.card{background:white;border-radius:12px;padding:20px;margin:16px 0;box-shadow:0 2px 10px #00000012}.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}label{display:flex;flex-direction:column;gap:5px;font-weight:600}input,select,button{padding:10px;border:1px solid #ccd3df;border-radius:7px;font-size:14px}button{background:#1769e0;color:white;border:0;cursor:pointer;margin-top:16px}button:disabled{opacity:.6}pre{white-space:pre-wrap;background:#111827;color:#e5e7eb;padding:16px;border-radius:8px;overflow:auto}.error{color:#b42318}.muted{color:#667085}
+</style></head>
+<body>
+<h1>数据库表结构对齐</h1><p class="muted">填写源数据库和基准数据库，预览需要补齐的结构及 SQL。网页不会自动执行 SQL。</p>
+<form id="form" class="card">
+<div class="grid"><label>数据库类型<select id="databaseType"><option value="DM">DM（达梦）</option><option value="KING_BASE">KING_BASE（人大金仓）</option></select></label></div>
+<div class="grid"><fieldset><legend>源数据库（待修复）</legend><label>Schema<input id="sourceSchema" required placeholder="HW_SSIP"></label><label>主机<input id="sourceHost" required></label><label>端口<input id="sourcePort" required value="5236"></label><label>用户名<input id="sourceUsername" required></label><label>密码<input id="sourcePassword" required type="password"></label></fieldset>
+<fieldset><legend>基准数据库</legend><label>Schema<input id="targetSchema" required placeholder="HW_SSIP"></label><label>主机<input id="targetHost" required></label><label>端口<input id="targetPort" required value="5236"></label><label>用户名<input id="targetUsername" required></label><label>密码<input id="targetPassword" required type="password"></label></fieldset></div>
+<button id="submit">开始对比</button><p id="error" class="error"></p></form>
+<section class="card"><h2>差异提示</h2><ul id="tips"><li class="muted">尚未执行对比</li></ul></section>
+<section class="card"><h2>待执行 SQL</h2><pre id="sql">尚未执行对比</pre></section>
+<script>
+const value=id=>document.getElementById(id).value;
+const connection=prefix=>({schema:value(prefix+'Schema'),host:value(prefix+'Host'),port:value(prefix+'Port'),username:value(prefix+'Username'),password:value(prefix+'Password')});
+document.getElementById('form').addEventListener('submit',async event=>{event.preventDefault();const button=document.getElementById('submit'),error=document.getElementById('error');button.disabled=true;error.textContent='';
+try{const response=await fetch('/api/align/preview',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({databaseType:value('databaseType'),source:connection('source'),target:connection('target')})});const data=await response.json();if(!response.ok)throw new Error(data.error||'请求失败');document.getElementById('tips').innerHTML=data.tips.length?data.tips.map(x=>`<li>${escapeHtml(x)}</li>`).join(''):'<li>无结构差异</li>';document.getElementById('sql').textContent=data.sql.length?data.sql.join('\n'):'无待执行 SQL';}catch(e){error.textContent=e.message;}finally{button.disabled=false;}});
+function escapeHtml(text){const div=document.createElement('div');div.textContent=text;return div.innerHTML;}
+</script></body></html>
